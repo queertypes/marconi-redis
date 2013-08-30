@@ -12,16 +12,7 @@
 # implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-"""Exports Redis storage controllers.
-
-Field Mappings:
-
-    In order to reduce memory space used, fields name will be, most of
-    the time, the first letter of their long name. Fields mapping will
-    be updated and documented in each controller class.
-"""
-
+"""Exports Redis storage controllers."""
 from marconi.storage.redis import claims
 from marconi.storage.redis import messages
 from marconi.storage.redis import queues

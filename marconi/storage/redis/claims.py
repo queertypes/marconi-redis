@@ -30,8 +30,6 @@ class ClaimController(storage.ClaimBase):
 
     @utils.raises_conn_error
     def create(self, queue, metadata, project=None, limit=10):
-        """Creates a claim.
-        """
         raise NotImplementedError()
 
     @utils.raises_conn_error

@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Implements Redis storage controller for messages."""
-
 import marconi.openstack.common.log as logging
 from marconi import storage
 from marconi.storage import exceptions
@@ -77,8 +76,8 @@ class MessageController(storage.MessageBase):
         return self._list(queue_id, claim_id)
 
     @utils.raises_conn_error
-    def list(self, queue, project=None, marker=None, limit=10,
-             echo=False, client_uuid=None, include_claimed=False):
+    def list(self, queue, project=None, marker=None,
+             limit=10, echo=False, client_uuid=None):
         self._make_consistent('%s.q.%s' % (project, queue))
         active_list = '%s.q.%s.a.ms' % (project, queue)
         start = self._db.zrank(active_list, marker) or 0
@@ -125,6 +124,11 @@ class MessageController(storage.MessageBase):
             }
 
     @utils.raises_conn_error
+    def bulk_get(self, queue, message_ids, project=None):
+        pass
+
+
+    @utils.raises_conn_error
     def post(self, queue, messages, client_uuid, project=None):
         ids = []
         msg_list = '%s.q.%s.a.ms' % (project, queue)
@@ -153,3 +157,7 @@ class MessageController(storage.MessageBase):
         msg_key = '%s.q.%s.%s.m.%s' % (project, queue, status, message_id)
         if self._db.zrem(msg_list, msg_key):
             self._db.delete(msg_key)
+
+    @utils.raises_conn_error
+    def bulk_delete(self, queue, message_ids, project=None):
+        pass
