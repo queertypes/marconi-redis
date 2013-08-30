@@ -1,0 +1,5 @@
+exclude .gitignore
+exclude .gitreview
+
+global-exclude *.pyc
+global-exclude *__pycache__*
