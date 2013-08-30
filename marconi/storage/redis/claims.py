@@ -22,20 +22,32 @@ LOG = logging.getLogger(__name__)
 
 
 class ClaimController(storage.ClaimBase):
-    """Implements claim resource operations using Redis."""
+    """Implements claim resource operations using Redis.
+
+    Claims do not have a schema of their own. They are implicitly
+    tracked by the message controller.
+    """
 
     @utils.raises_conn_error
     def get(self, queue, claim_id, project=None):
+        """Returns age, TTL, list of claimed messages."""
         raise NotImplementedError()
 
     @utils.raises_conn_error
     def create(self, queue, metadata, project=None, limit=10):
+        """FIFO: renames message keys *m* to *cm*, while bumping up
+        their TTL by this claim's TTL.
+
+        :returns: A list of claimed messages
+        """
         raise NotImplementedError()
 
     @utils.raises_conn_error
     def update(self, queue, claim_id, metadata, project=None):
+        """Updates the ttl."""
         raise NotImplementedError()
 
     @utils.raises_conn_error
     def delete(self, queue, claim_id, project=None):
+        """Renames message keys from *cm* to *m*"""
         raise NotImplementedError()
