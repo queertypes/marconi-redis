@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Implements the Redis storage controller for queues."""
-
+import msgpack
 
 import marconi.openstack.common.log as logging
 from marconi import storage
@@ -57,10 +57,9 @@ class QueueController(storage.QueueBase):
     def list(self, project=None, marker=None,
              limit=10, detailed=False):
         qskey = self._list(project)
-        start = self._db.zrank(qs_key, marker) or 0
+        start = self._db.zrank(qskey, marker) or 0
         stop = start + limit
-        cursor = (q.split('.')[-1] for q in
-                  self._db.zrange(qskey, start, stop))
+        cursor = (q for q in self._db.zrange(qskey, start, stop))
         marker = {}
 
         def it():
@@ -78,7 +77,8 @@ class QueueController(storage.QueueBase):
     @utils.raises_conn_error
     def get_metadata(self, name, project=None):
         """Fetch queue metadata."""
-        return self._db.hget(self._queue(project, name), 'm') or {}
+        m = self._db.hget(self._queue(project, name), 'm')
+        return msgpack.loads(m)
 
     @utils.raises_conn_error
     def create(self, name, project=None):
@@ -102,7 +102,7 @@ class QueueController(storage.QueueBase):
         key = self._queue(project, name)
         if not self._db.exists(key):
             raise exceptions.QueueDoesNotExist(name, project)
-        self._db.hset(key, 'm', metadata)
+        self._db.hset(key, 'm', msgpack.dumps(metadata))
 
     @utils.raises_conn_error
     def delete(self, name, project=None):
