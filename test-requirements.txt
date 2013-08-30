@@ -1,0 +1,19 @@
+# Packaging
+mock
+distribute>=0.6.24
+
+# Unit testing
+ddt
+discover
+fixtures
+python-subunit
+testrepository
+testtools
+
+# Test runner
+nose
+nose-exclude
+openstack.nose_plugin
+
+# Metrics and style
+hacking
