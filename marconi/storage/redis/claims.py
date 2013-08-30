@@ -49,5 +49,5 @@ class ClaimController(storage.ClaimBase):
 
     @utils.raises_conn_error
     def delete(self, queue, claim_id, project=None):
-        """Renames message keys from *cm* to *m*"""
+        """Renames message keys from *cm* to *m*."""
         raise NotImplementedError()

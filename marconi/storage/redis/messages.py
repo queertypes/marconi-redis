@@ -13,6 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Implements Redis storage controller for messages."""
+import itertools
+import time
+
+import msgpack
+
 import marconi.openstack.common.log as logging
 from marconi import storage
 from marconi.storage import exceptions
@@ -65,10 +70,10 @@ class MessageController(storage.MessageBase):
                       limit=None, predicate=None):
         key = 'q.%s.%s.ms' % (project, queue)
         start = self._db.zrank(key, marker) or 0
-        stop = start + limit
-        predicate = predicate or lambda m: True
-        return (m for m in self._db.zrange(key, 0, -1)
-                if predicate(self._message(project, queue, m)))
+        predicate = predicate or (lambda m: True)
+        gen = (m for m in self._db.zrange(key, start, -1)
+               if predicate(self._message(project, queue, m)))
+        return itertools.islice(gen, limit)
 
     def _make_consistent(self, project, queue):
         """Use this before any read operation to always yield a consistent
@@ -96,18 +101,21 @@ class MessageController(storage.MessageBase):
         def it(ids):
             for key in ids:
                 marker['next'] = key
-                ttl = self._db.ttl(self._message(project, queue, key))
 
-                # remove expired keys on read
+                ttl = self._db.ttl(key)
                 if ttl == -1:
                     self._remove(project, queue, [key])
                     continue
 
+                b, t = self._db.hmget(key, ['b', 't'])
+                if not all([b, t]):
+                    continue
+
                 yield {
-                    'id': key_id,
-                    'age': None,
+                    'id': key,
+                    'age': int(time.time()) - int(t),
                     'ttl': ttl,
-                    'body': self._db.get(key)
+                    'body': msgpack.loads(b)
                 }
 
         yield it(mids)
