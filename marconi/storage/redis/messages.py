@@ -24,15 +24,15 @@ LOG = logging.getLogger(__name__)
 class MessageController(storage.MessageBase):
     """Implements message resource operations using Redis.
 
-    Messages:
-      q => queue
-      a => active
-      c => claimed
-      m => message
-      {project}.q.{name}.a.ms => [{project}.q.{name}.a.m.{id1}, ...]
-      {project}.q.{name}.c.ms => [{project}.q.{name}.c.m.{id1}, ...]
-      {project}.q.{name}.a.m.{id} => ...
-      {project}.q.{name}.c.m.{id} => ...
+    Schema:
+      q -> queue
+      m -> message
+      q.{project}.{queue}.m.{mid} -> redis.hset{'b': ..., 'c'}
+        b -> body, Msgpack Blob
+        c -> claim ID
+        t -> creation timestamp for age calculations
+        k -> client ID
+      q.{project}.{queue}.ms -> redis.zset[id, id, id, ...]
     """
 
     def __init__(self, *args, **kwargs):
@@ -44,56 +44,63 @@ class MessageController(storage.MessageBase):
         self._db = self.driver.db
         self._db.set('m.cnt', 0)  # number of messages posted for msg ID
 
-    def _make_consistent(self, queue_id):
-        active_list = '%s.a.ms' % (queue_id)
-        stop = self._db.zcard(active_list)
-        expired = [m for m in
-                   self._db.zrange(active_list, 0, stop)
-                   if self._db.ttl(m) == -1]
+    def _message(self, project, queue, mid):
+        return 'q.%s.%s.m.%s' % (project, queue, mid)
+
+    def _mlist(self, project, queue):
+        return 'q.%s.%s.ms' % (project, queue)
+
+    def _is_claimed(self, mkey):
+        return self._db.hget(mkey, 'c') is not None
+
+    def _active_messages(self, project, queue, marker=None, limit=None):
+        return self._all_messages(project, queue, marker, limit,
+                                  lambda m: not self._is_claimed(m))
+
+    def _claimed_messages(self, project, queue, marker=None, limit=None):
+        return self._all_messages(project, queue, marker, limit,
+                                  lambda m: self._is_claimed(m))
+
+    def _all_messages(self, project, queue, marker=None,
+                      limit=None, predicate=None):
+        key = 'q.%s.%s.ms' % (project, queue)
+        start = self._db.zrank(key, marker) or 0
+        stop = start + limit
+        predicate = predicate or lambda m: True
+        return (m for m in self._db.zrange(key, 0, -1)
+                if predicate(self._message(project, queue, m)))
+
+    def _make_consistent(self, project, queue):
+        """Use this before any read operation to always yield a consistent
+        view.
+        """
+        expired = (m for m in
+                   self._all_messages(project, queue)
+                   if self._db.ttl(m) == -1)
         if expired:
-            self._db.zrem(active_list, *expired)
+            self._remove(project, queue, expired)
 
-    def _list(self, queue_id, claim_id=None):
-        self._make_consistent(queue_id)
-        msgs = '%s.%s.ms' % (queue_id, 'c' if claim_id else 'a')
-
-        # efficient facade for counting messages in Redis
-        class Counter(object):
-            def __init__(self, db, msgs_):
-                self._count = db.zcard(msgs_)
-
-            def count(self):
-                return self._count
-
-        return Counter(self._db, msgs)
-
-
-    def active(self, queue_id, marker=None, echo=False,
-               client_uuid=None, fields=None):
-        return self._list(queue_id)
-
-    def claimed(self, queue_id, claim_id=None, expires=None, limit=None):
-        return self._list(queue_id, claim_id)
+    def _remove(self, project, queue, messages):
+        """Bulk delete operation - network friendly."""
+        keys = (self._message(project, queue, m) for m in messages)
+        self._db.zrem(self._mlist(project, queue), *messages)
+        self._db.delete(*keys)
 
     @utils.raises_conn_error
     def list(self, queue, project=None, marker=None,
              limit=10, echo=False, client_uuid=None):
-        self._make_consistent('%s.q.%s' % (project, queue))
-        active_list = '%s.q.%s.a.ms' % (project, queue)
-        start = self._db.zrank(active_list, marker) or 0
-        stop = start + limit
-        msg_keys = self._db.zrange(active_list, start, stop)
-        marker_id = {}
+        self._make_consistent(queue, project)
+        mids = self._active_messages(project, queue, marker, limit)
+        marker = {}
 
-        def it(keys):
-            for key in keys:
-                key_id = key.split('.')[-1]
-                marker_id['next'] = key_id
-                ttl = self._db.ttl(key)
+        def it(ids):
+            for key in ids:
+                marker['next'] = key
+                ttl = self._db.ttl(self._message(project, queue, key))
 
                 # remove expired keys on read
                 if ttl == -1:
-                    self._db.zrem(active_list, key)
+                    self._remove(project, queue, [key])
                     continue
 
                 yield {
@@ -103,48 +110,69 @@ class MessageController(storage.MessageBase):
                     'body': self._db.get(key)
                 }
 
-        yield it(msg_keys)
-        yield str(marker_id['next'])
+        yield it(mids)
+        yield str(marker['next'])
 
     @utils.raises_conn_error
-    def get(self, queue, message_ids, project=None):
-        active_list = '%s.q.%s.a.ms' % (project, queue)
-        for message in message_ids:
-            msg_key = '%s.q.%s.a.m.%s' % (project, queue, message)
-            ttl = self._db.ttl(msg_key)
+    def get(self, queue, message_id, project=None):
+        key = self._message(project, queue, message_id)
+        b, t = self._db.hmget(key, ['b', 't'])
 
-            if ttl == -1:
-                self._db.zrem(active_list, msg_key)
-                continue
+        ttl = self._db.ttl(key)
+        if ttl == -1:
+            self._remove(project, queue, [key])
+            raise exceptions.MessageDoesNotExist(message_id, queue, project)
 
-            yield {
-                'body': self._db.get(msg_key),
-                'ttl': ttl,
-                'id': message
-            }
+        if not all([b, t]):
+            raise exceptions.MessageDoesNotExist(message_id, queue, project)
+
+        return {
+            'body': msgpack.loads(b),
+            'age': int(time.time()) - int(t),
+            'ttl': ttl,
+            'id': message_id
+        }
 
     @utils.raises_conn_error
     def bulk_get(self, queue, message_ids, project=None):
-        pass
+        for mid in message_ids:
+            key = self._message(project, queue, mid)
 
+            ttl = self._db.ttl(key)
+            if ttl == -1:
+                self._remove(project, queue, [key])
+
+            b, t = self._db.hmget(key, ['b', 't'])
+            if not all([b, t]):
+                continue
+
+            yield {
+                'body': msgpack.loads(b),
+                'age': int(time.time()) - int(t),
+                'ttl': ttl,
+                'id': mid
+            }
 
     @utils.raises_conn_error
     def post(self, queue, messages, client_uuid, project=None):
         ids = []
-        msg_list = '%s.q.%s.a.ms' % (project, queue)
-        msg = '%s.q.%s.a.m' % (project, queue)
+        list_key = self._mlist(project, queue)
 
-        # message IDs are maintained as an atomic counter handled by
-        # Redis. This is also used to take advantage of sorted sets,
-        # where the score and the value are the same.
+        # NOTE(cpp-cabrera): message IDs are maintained as an atomic
+        # counter handled by Redis. This is also used to take
+        # advantage of sorted sets, where the score and the value are
+        # the same.
         for message in messages:
             msg_id = self._db.incr('m.cnt')
-            msg_key = msg + '.' + str(msg_id)
-            print(msg_key)
-            added = self._db.zadd(msg_list, msg_id, msg_key)
+            msg_key = self._message(project, queue, msg_id)
+            added = self._db.zadd(list_key, 1.0, msg_id)
 
             if added:
-                self._db.set(msg_key, message['body'])
+                self._db.hmset(msg_key, {
+                    'b': msgpack.dumps(message['body']),
+                    't': time.time(),
+                    'k': client_uuid
+                })
                 self._db.expire(msg_key, message['ttl'])
                 ids.append(str(msg_id))
 
@@ -152,12 +180,8 @@ class MessageController(storage.MessageBase):
 
     @utils.raises_conn_error
     def delete(self, queue, message_id, project=None, claim=None):
-        status = 'c' if claim else 'a'
-        msg_list = '%s.q.%s.%s.ms' % (project, queue, status)
-        msg_key = '%s.q.%s.%s.m.%s' % (project, queue, status, message_id)
-        if self._db.zrem(msg_list, msg_key):
-            self._db.delete(msg_key)
+        self._remove(project, queue, [message_id])
 
     @utils.raises_conn_error
     def bulk_delete(self, queue, message_ids, project=None):
-        pass
+        self._remove(project, queue, message_ids)
