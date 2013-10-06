@@ -17,8 +17,8 @@ import msgpack
 
 import marconi.openstack.common.log as logging
 from marconi import storage
-from marconi.storage import exceptions
-from marconi.storage.redis import utils
+from marconi.queues.storage import exceptions
+from marconi.queues.storage.redis import utils
 
 LOG = logging.getLogger(__name__)
 

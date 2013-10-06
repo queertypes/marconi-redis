@@ -13,10 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Implements the Redis storage controller for claims."""
+import uuid
 
 import marconi.openstack.common.log as logging
 from marconi import storage
-from marconi.storage.redis import utils
+from marconi.queues.storage.redis import utils
 
 LOG = logging.getLogger(__name__)
 
@@ -24,9 +25,16 @@ LOG = logging.getLogger(__name__)
 class ClaimController(storage.ClaimBase):
     """Implements claim resource operations using Redis.
 
-    Claims do not have a schema of their own. They are implicitly
-    tracked by the message controller.
+    Schema:
+      c.{project}.{queue}.{cid} -> redis.ttl_key
     """
+    def __init__(self, *args, **kwargs):
+        super(ClaimController, self).__init__(*args, **kwargs)
+        self._msg_ctrl = self.driver.queue_controller
+        self._db = self.driver.db
+
+    def _key(self, project, queue, cid):
+        return 'c.%s.%s.%s' % (project, queue, cid)
 
     @utils.raises_conn_error
     def get(self, queue, claim_id, project=None):
@@ -35,19 +43,35 @@ class ClaimController(storage.ClaimBase):
 
     @utils.raises_conn_error
     def create(self, queue, metadata, project=None, limit=10):
-        """FIFO: renames message keys *m* to *cm*, while bumping up
-        their TTL by this claim's TTL.
+        """FIFO: sets the claim ID field for a set of messages.
 
         :returns: A list of claimed messages
         """
-        raise NotImplementedError()
+        cid = str(uuid.uuid4())
+        ttl = metadata['ttl']
+        grace = metadata['grace']
+        for mid in self._msg_ctrl._active_messages(project, queue,
+                                                   limit=limit):
+            key = self._msg_ctrl._message(project, queue, mid)
+            old_ttl = self.ttl(key)
+
+            self._db.hset(key, 'c', cid)
+            self._db.expire(key, old_ttl + ttl + grace)
+
+        claim_key = self._key(project, queue, cid)
+        self._db.set(claim_key, 0)
+        self._db.expire(claim_key, ttl + grace)
 
     @utils.raises_conn_error
     def update(self, queue, claim_id, metadata, project=None):
         """Updates the ttl."""
-        raise NotImplementedError()
+        key = self._key(project, queue, claim_id)
+        # raise if not exists
+        self._db.expire(key, metadata['ttl'])
 
     @utils.raises_conn_error
     def delete(self, queue, claim_id, project=None):
         """Renames message keys from *cm* to *m*."""
-        raise NotImplementedError()
+        key = self._key(project, queue, claim_id)
+        self._db.delete(key)
+        # release messages

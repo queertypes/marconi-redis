@@ -18,7 +18,7 @@ import functools
 import redis
 
 import marconi.openstack.common.log as logging
-from marconi.storage import exceptions as storage_exceptions
+from marconi.queues.storage import exceptions as storage_exceptions
 
 
 LOG = logging.getLogger(__name__)

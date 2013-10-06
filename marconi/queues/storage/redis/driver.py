@@ -17,8 +17,8 @@ import redis
 
 from marconi.openstack.common import log as logging
 from marconi import storage
-from marconi.storage.redis import controllers
-from marconi.storage.redis import options
+from marconi.queues.storage.redis import controllers
+from marconi.queues.storage.redis import options
 
 LOG = logging.getLogger(__name__)
 
