@@ -64,7 +64,6 @@ class RedisQueueTests(base.QueueControllerTest):
         self.load_conf('wsgi_redis.conf')
 
     def tearDown(self):
-        self.controller.drop()
         super(RedisQueueTests, self).tearDown()
 
 
@@ -79,7 +78,6 @@ class RedisMessageTests(base.MessageControllerTest):
         self.load_conf('wsgi_redis.conf')
 
     def tearDown(self):
-        self.controller.drop()
         super(RedisMessageTests, self).tearDown()
 
 
@@ -94,5 +92,4 @@ class RedisClaimTests(base.ClaimControllerTest):
         self.load_conf('wsgi_redis.conf')
 
     def tearDown(self):
-        self.controller.drop()
         super(RedisClaimTests, self).tearDown()

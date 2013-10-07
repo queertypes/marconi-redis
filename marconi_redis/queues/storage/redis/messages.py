@@ -88,7 +88,8 @@ class MessageController(storage.MessageBase):
     def _remove(self, project, queue, messages):
         """Bulk delete operation - network friendly."""
         keys = (self._message(project, queue, m) for m in messages)
-        self._db.zrem(self._mlist(project, queue), *messages)
+        print(keys, messages)
+        self._db.zrem(self._mlist(project, queue), messages)
         self._db.delete(*keys)
 
     @utils.raises_conn_error
@@ -185,6 +186,12 @@ class MessageController(storage.MessageBase):
                 ids.append(str(msg_id))
 
         return ids
+
+    def first(self, queue, project=None, sort=1):
+        if sort != 1:
+            yield reversed(self._active_messages(project, queue))
+        else:
+            yield self._active_messages(project, queue)
 
     @utils.raises_conn_error
     def delete(self, queue, message_id, project=None, claim=None):

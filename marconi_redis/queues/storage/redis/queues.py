@@ -110,8 +110,7 @@ class QueueController(storage.QueueBase):
         qlist = self._list(project)
         key = self._queue(project, name)
         self._db.delete(key)
-        self._db.zrem(qlist)
-        # TODO(cpp-cabrera): delete messages/claims
+        self._db.zremrangebyscore(qlist, -1, 1)
 
     @utils.raises_conn_error
     def stats(self, name, project=None, claim=None):

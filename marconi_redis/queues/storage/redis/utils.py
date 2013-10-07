@@ -36,7 +36,6 @@ def raises_conn_error(func):
         try:
             return func(*args, **kwargs)
         except redis.ConnectionError:
-            # NOTE(flaper87): Raise the error
             msg = "ConnectionFailure caught"
             LOG.error(msg)
             raise storage_exceptions.ConnectionError(msg)

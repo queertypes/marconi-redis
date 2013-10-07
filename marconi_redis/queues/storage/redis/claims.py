@@ -30,7 +30,7 @@ class ClaimController(storage.ClaimBase):
     """
     def __init__(self, *args, **kwargs):
         super(ClaimController, self).__init__(*args, **kwargs)
-        self._msg_ctrl = self.driver.queue_controller
+        self._msg_ctrl = self.driver.message_controller
         self._db = self.driver.db
 
     def _key(self, project, queue, cid):
@@ -53,7 +53,7 @@ class ClaimController(storage.ClaimBase):
         for mid in self._msg_ctrl._active_messages(project, queue,
                                                    limit=limit):
             key = self._msg_ctrl._message(project, queue, mid)
-            old_ttl = self.ttl(key)
+            old_ttl = 100
 
             self._db.hset(key, 'c', cid)
             self._db.expire(key, old_ttl + ttl + grace)

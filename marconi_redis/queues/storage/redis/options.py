@@ -52,4 +52,4 @@ OPTIONS = {
     'decode_responses': False
 }
 
-CFG = config.namespace('drivers:storage:redis').from_options(**OPTIONS)
+CFG = config.namespace('queues:drivers:storage:redis').from_options(**OPTIONS)
