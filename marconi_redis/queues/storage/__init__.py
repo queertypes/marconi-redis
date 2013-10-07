@@ -12,8 +12,14 @@
 # implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Redis Storage Driver for Marconi."""
-from marconi.queues.storage.redis import driver
+"""Marconi Storage Drivers"""
+
+from marconi.queues.storage import base
+from marconi.queues.storage import exceptions  # NOQA
+
 
 # Hoist classes into package namespace
-Driver = driver.Driver
+ClaimBase = base.ClaimBase
+DriverBase = base.DriverBase
+MessageBase = base.MessageBase
+QueueBase = base.QueueBase

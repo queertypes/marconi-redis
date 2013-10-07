@@ -8,4 +8,4 @@ oslo.config>=1.2.0
 redis
 hiredis
 
--f http://tarballs.openstack.org/marconi/marconi-master.tar.gz#egg=marconi
+-e git+https://github.com/openstack/marconi#egg=marconi
