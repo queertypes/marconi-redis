@@ -1,7 +1,7 @@
 Marconi: Redis Back End
 ***********************
 
-:version: 0.7
+:version: 0.7.1
 :more: `Marconi`_
 :license: Apache License Version 2.0
 :maintainer: Alejandro Cabrera <alejandro.cabrera@rackspace.com>
