@@ -19,7 +19,7 @@ import time
 import msgpack
 
 import marconi.openstack.common.log as logging
-from marconi import storage
+from marconi.queues import storage
 from marconi.queues.storage import exceptions
 from marconi_redis.queues.storage.redis import utils
 

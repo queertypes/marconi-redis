@@ -13,10 +13,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from marconi.tests.queues.storage import base as testing
+import os
+
+import testtools
+
+from marconi import tests as testing
+from marconi.tests.queues.storage import base
+from marconi_redis.queues.storage import redis
+from marconi_redis.queues.storage.redis import controllers
 
 
-@testing.requires_redis  # NOTE(cabrera): it's fine to define this here
+SKIP_REDIS_TESTS = os.environ.get('MARCONI_TEST_REDIS') is None
+
+
+def requires_redis(test_case):
+    """Decorator to indicate that a test requires Redis.
+
+    If the environment variable is set, the tests will assume that
+    redis-server is running.
+    """
+
+    reason = ('Skipping tests that require Redis. Ensure '
+              'redis-server is running on localhost and then set '
+              'MARCONI_TEST_REDIS in order to enable tests '
+              'that are specific to this storage backend. ')
+
+    return testtools.skipIf(SKIP_REDIS_TESTS, reason)(test_case)
+
+
+@requires_redis
 class RedisDriverTest(testing.TestBase):
 
     def setUp(self):
@@ -28,8 +53,8 @@ class RedisDriverTest(testing.TestBase):
         # check we can obtain a DB instance
 
 
-@testing.requires_redis
-class RedisQueueTests(base.QueueControllerTests):
+@requires_redis
+class RedisQueueTests(base.QueueControllerTest):
 
     driver_class = redis.Driver
     controller_class = controllers.QueueController
@@ -43,8 +68,8 @@ class RedisQueueTests(base.QueueControllerTests):
         super(RedisQueueTests, self).tearDown()
 
 
-@testing.requires_redis
-class RedisMessageTests(base.MessageControllerTests):
+@requires_redis
+class RedisMessageTests(base.MessageControllerTest):
 
     driver_class = redis.Driver
     controller_class = controllers.MessageController
@@ -58,7 +83,7 @@ class RedisMessageTests(base.MessageControllerTests):
         super(RedisMessageTests, self).tearDown()
 
 
-@testing.requires_redis
+@requires_redis
 class RedisClaimTests(base.ClaimControllerTest):
 
     driver_class = redis.Driver
