@@ -50,14 +50,18 @@ class DataDriver(storage.DataDriverBase):
         return _connection(self.redis_conf)
 
     @property
+    def database(self):
+        return self.connection
+
+    @property
     def queues_database(self):
         """Property for lazy instantiation of redis's database."""
-        return self.connection
+        return self.database
 
     @property
     def messages_databases(self):
         """Property for lazy instantiation of redis's database."""
-        return self.connection
+        return self.database
 
     @property
     def queue_controller(self):
@@ -86,9 +90,13 @@ class ControlDriver(storage.ControlDriverBase):
         """MongoDB client connection instance."""
         return _connection(self.redis_conf)
 
+    @property
+    def database(self):
+        return self.connection
+
     @decorators.lazy_property(write=False)
     def shards_database(self):
-        return self.connection
+        return self.database
 
     @property
     def shards_controller(self):
@@ -96,7 +104,7 @@ class ControlDriver(storage.ControlDriverBase):
 
     @decorators.lazy_property(write=False)
     def catalogue_database(self):
-        return self.connection
+        return self.database
 
     @property
     def catalogue_controller(self):

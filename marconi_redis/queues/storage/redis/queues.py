@@ -36,7 +36,7 @@ class QueueController(storage.QueueBase):
 
     def __init__(self, *args, **kwargs):
         super(QueueController, self).__init__(*args, **kwargs)
-        self._db = self.driver.db
+        self._db = self.driver.database
 
     def _list(self, project):
         return 'qs.%s' % (project or '_')

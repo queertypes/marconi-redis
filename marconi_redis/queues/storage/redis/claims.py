@@ -31,7 +31,7 @@ class ClaimController(storage.ClaimBase):
     def __init__(self, *args, **kwargs):
         super(ClaimController, self).__init__(*args, **kwargs)
         self._msg_ctrl = self.driver.message_controller
-        self._db = self.driver.db
+        self._db = self.driver.database
 
     def _key(self, project, queue, cid):
         return 'c.%s.%s.%s' % (project, queue, cid)

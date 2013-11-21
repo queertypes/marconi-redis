@@ -46,7 +46,7 @@ class MessageController(storage.MessageBase):
         # Cache for convenience and performance (avoids extra lookups and
         # recreating the range for every request.)
         self._queue_ctrl = self.driver.queue_controller
-        self._db = self.driver.db
+        self._db = self.driver.database
         self._db.set('m.cnt', 0)  # number of messages posted for msg ID
 
     def _message(self, project, queue, mid):
