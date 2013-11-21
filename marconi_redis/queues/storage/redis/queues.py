@@ -17,7 +17,7 @@ import msgpack
 
 import marconi.openstack.common.log as logging
 from marconi.queues import storage
-from marconi.queues.storage import exceptions
+from marconi.queues.storage import errors
 from marconi_redis.queues.storage.redis import utils
 
 LOG = logging.getLogger(__name__)
@@ -101,7 +101,7 @@ class QueueController(storage.QueueBase):
     def set_metadata(self, name, metadata, project=None):
         key = self._queue(project, name)
         if not self._db.exists(key):
-            raise exceptions.QueueDoesNotExist(name, project)
+            raise errors.QueueDoesNotExist(name, project)
         self._db.hset(key, 'm', msgpack.dumps(metadata))
 
     @utils.raises_conn_error

@@ -16,4 +16,5 @@
 from marconi_redis.queues.storage.redis import driver
 
 # Hoist classes into package namespace
-Driver = driver.Driver
+ControlDriver = driver.ControlDriver
+DataDriver = driver.DataDriver

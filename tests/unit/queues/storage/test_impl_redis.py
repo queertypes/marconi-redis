@@ -48,15 +48,17 @@ class RedisDriverTest(testing.TestBase):
         super(RedisDriverTest, self).setUp()
         self.load_conf('wsgi_redis.conf')
 
-    def test_db_instance(self):
-        driver = redis.Driver()
-        # check we can obtain a DB instance
+    def test_data_db_instance(self):
+        redis.DataDriver()
+
+    def test_control_db_instance(self):
+        redis.ControlDriver()
 
 
 @requires_redis
 class RedisQueueTests(base.QueueControllerTest):
 
-    driver_class = redis.Driver
+    driver_class = redis.DataDriver
     controller_class = controllers.QueueController
 
     def setUp(self):
@@ -70,7 +72,7 @@ class RedisQueueTests(base.QueueControllerTest):
 @requires_redis
 class RedisMessageTests(base.MessageControllerTest):
 
-    driver_class = redis.Driver
+    driver_class = redis.DataDriver
     controller_class = controllers.MessageController
 
     def setUp(self):
@@ -84,7 +86,7 @@ class RedisMessageTests(base.MessageControllerTest):
 @requires_redis
 class RedisClaimTests(base.ClaimControllerTest):
 
-    driver_class = redis.Driver
+    driver_class = redis.DataDriver
     controller_class = controllers.ClaimController
 
     def setUp(self):

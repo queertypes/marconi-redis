@@ -20,7 +20,7 @@ import msgpack
 
 import marconi.openstack.common.log as logging
 from marconi.queues import storage
-from marconi.queues.storage import exceptions
+from marconi.queues.storage import errors
 from marconi_redis.queues.storage.redis import utils
 
 LOG = logging.getLogger(__name__)
@@ -130,10 +130,10 @@ class MessageController(storage.MessageBase):
         ttl = self._db.ttl(key)
         if ttl == -1:
             self._remove(project, queue, [key])
-            raise exceptions.MessageDoesNotExist(message_id, queue, project)
+            raise errors.MessageDoesNotExist(message_id, queue, project)
 
         if not all([b, t]):
-            raise exceptions.MessageDoesNotExist(message_id, queue, project)
+            raise errors.MessageDoesNotExist(message_id, queue, project)
 
         return {
             'body': msgpack.loads(b),

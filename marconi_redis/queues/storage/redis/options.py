@@ -15,41 +15,28 @@
 
 """Redis storage driver configuration options."""
 
-from marconi.common import config
+from oslo.config import cfg
 
 # All options line up with the arguments list for
 # the python-redis client StrictRedis constructor
-OPTIONS = {
+REDIS_OPTIONS = [
     # Database URI
-    'host': 'localhost',
+    cfg.StrOpt('host', default='localhost',
+               help='Address of redis server'),
 
     # Database port
-    'port': 6379,
+    cfg.IntOpt('port', default=6379,
+               help='Port to communicate with redis server.'),
 
     # For a local server: unix socket path to use to communicate
     # If specified, takes precedence over host:port.
-    'unix_socket_path': None,
+    cfg.StrOpt('unix_socket_path',
+               help=('Useful for redis on localhost - takes precedence ',
+                     'over host:port.')),
 
     # Password to access DB
-    'password': None,
+    cfg.StrOpt('password',
+               help='If redis requires auth, place the password here.'),
+]
 
-    # How long to wait before timing out a request to the DB
-    'socket_timeout': None,
-
-    # Default charset of communication to/fro DB
-    'charset': 'utf-8',
-
-    # How to handle encoding errors
-    'errors': 'strict',
-
-    # https://github.com/andymccurdy/redis-py#connection-pools
-    'connection_pool': None,
-
-    # ???
-    'db': 0,
-
-    # ???
-    'decode_responses': False
-}
-
-CFG = config.namespace('queues:drivers:storage:redis').from_options(**OPTIONS)
+REDIS_GROUP = 'queues:drivers:storage:redis'
