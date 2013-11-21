@@ -13,10 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Exports Redis storage controllers."""
+from marconi_redis.queues.storage.redis import catalogue
 from marconi_redis.queues.storage.redis import claims
 from marconi_redis.queues.storage.redis import messages
 from marconi_redis.queues.storage.redis import queues
+from marconi_redis.queues.storage.redis import shards
 
 ClaimController = claims.ClaimController
 MessageController = messages.MessageController
 QueueController = queues.QueueController
+
+CatalogueController = catalogue.CatalogueController
+ShardsController = shards.ShardsController

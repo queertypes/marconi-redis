@@ -95,3 +95,29 @@ class RedisClaimTests(base.ClaimControllerTest):
 
     def tearDown(self):
         super(RedisClaimTests, self).tearDown()
+
+
+@requires_redis
+class RedisShardsTests(base.ShardsControllerTest):
+    driver_class = redis.ControlDriver
+    controller_class = controllers.ShardsController
+
+    def setUp(self):
+        super(RedisShardsTests, self).setUp()
+        self.load_conf('wsgi_redis.conf')
+
+    def tearDown(self):
+        super(RedisShardsTests, self).tearDown()
+
+
+@requires_redis
+class RedisCatalogueTests(base.CatalogueControllerTest):
+    driver_class = redis.ControlDriver
+    controller_class = controllers.CatalogueController
+
+    def setUp(self):
+        super(RedisCatalogueTests, self).setUp()
+        self.load_conf('wsgi_redis.conf')
+
+    def tearDown(self):
+        super(RedisCatalogueTests, self).tearDown()
