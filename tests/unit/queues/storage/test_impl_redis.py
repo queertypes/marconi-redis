@@ -49,10 +49,10 @@ class RedisDriverTest(testing.TestBase):
         self.load_conf('wsgi_redis.conf')
 
     def test_data_db_instance(self):
-        redis.DataDriver()
+        redis.DataDriver(self.conf)
 
     def test_control_db_instance(self):
-        redis.ControlDriver()
+        redis.ControlDriver(self.conf)
 
 
 @requires_redis
