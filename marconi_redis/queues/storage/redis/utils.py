@@ -40,3 +40,16 @@ def raises_conn_error(func):
             LOG.error(msg)
             raise storage_errors.ConnectionError(msg)
     return wrapper
+
+
+def lfind(client, list_key, marker, by=1000):
+    n = client.llen(list_key)
+    start, stop = 0, by
+    while start < n:
+        try:
+            idx = client.lrange(list_key, start, stop).index(marker)
+            return start + idx + 1
+        except ValueError:
+            start, stop = stop, stop + by
+
+    return 0
