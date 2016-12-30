@@ -167,7 +167,7 @@ class MessageController(storage.MessageBase):
         ids = []
         list_key = self._mlist(project, queue)
 
-        # NOTE(cpp-cabrera): message IDs are maintained as an atomic
+        # NOTE(allele.dev): message IDs are maintained as an atomic
         # counter handled by Redis. This is also used to take
         # advantage of sorted sets, where the score and the value are
         # the same.
